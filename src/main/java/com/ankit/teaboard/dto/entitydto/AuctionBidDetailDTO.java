@@ -26,4 +26,5 @@ public class AuctionBidDetailDTO {
     private int cstatus;
     private Date createdOn;
     private Long createdBy;
+    private String remarks;
 }

@@ -19,7 +19,7 @@ public interface AuctionBidDetailRepository extends JpaRepository<AuctionBidDeta
     @Query("SELECT DISTINCT(auctionBidDetail.userLogin.userLoginId) FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionDetail.auctionDetailId=:auctionDetailId")
     public List<Long> getEligibleBidderIds(@Param("auctionDetailId") Long auctionDetailId);
 
-    @Query(value = "select item.auctionItemDetailId,bidDtl.bidderId,bidDtl.auctionBidDetailId,bidDtl.maxBid,item.schedulerCount,item.basePrice,item.increment,item.auctionDetailId,item.currentPrice,bidDtl.cstatus,item.reservePrice from auctionDetail auction inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId where item.isactive=1 and auction.auctionDetailId=:auctionDetailId and bidDtl.isActive=1 and bidDtl.cstatus=0 order by auctionItemDetailId",nativeQuery = true)
+    @Query(value = "select item.auctionItemDetailId,bidDtl.bidderId,bidDtl.auctionBidDetailId,bidDtl.maxBid,item.schedulerCount,item.basePrice,item.increment,item.auctionDetailId,item.currentPrice,bidDtl.cstatus,item.reservePrice from auctionDetail auction inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId where item.isactive=1 and auction.auctionDetailId=:auctionDetailId and bidDtl.isActive=1 and bidDtl.cstatus=0 and item.cstatus=0 order by auctionItemDetailId",nativeQuery = true)
     public List<Object[]> getLiveBidData(@Param("auctionDetailId") Long auctionDetailId);
 
     @Query(value = "select item.auctionItemDetailId,bidDtl.bidderId,bidDtl.auctionBidDetailId,bidDtl.maxBid,item.schedulerCount,item.basePrice,item.increment,item.auctionDetailId,item.currentPrice,bidDtl.cstatus,item.reservePrice from auctionDetail auction inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId where item.isactive=1 and auction.auctionDetailId=:auctionDetailId and bidDtl.isActive=1 and bidDtl.bidderId=:userLoginId ORDER BY item.auctionItemDetailId",nativeQuery = true)
@@ -51,4 +51,19 @@ public interface AuctionBidDetailRepository extends JpaRepository<AuctionBidDeta
 
     @Query(value = "select item.auctionItemDetailId,bidDtl.bidderId,bidDtl.auctionBidDetailId,bidDtl.maxBid,item.schedulerCount,item.basePrice,item.increment,item.auctionDetailId,item.currentPrice,bidDtl.cstatus,item.reservePrice from auctionDetail auction inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId where item.isactive=1 and auction.auctionDetailId=:auctionDetailId and bidDtl.isActive=1 and bidDtl.cstatus=0 and item.auctionItemDetailId=:auctionItemDetailId order by item.auctionItemDetailId",nativeQuery = true)
     public List<Object[]> getLiveBidDataByAuctionItemDetailId(@Param("auctionDetailId") Long auctionDetailId,@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+    @Query(value = "select count(bidDtl.bidderId) as totalEligibleBidderCount  from auctionDetail auction  inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId  inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId  where item.isactive=1 and item.auctionItemDetailId=:auctionItemDetailId  and bidDtl.isActive=1 and bidDtl.cstatus = 0  group by item.auctionItemDetailId",nativeQuery = true)
+    public int getItemWiseEligibleBiddersCountByAuctionItemDetailId(@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+    @Query(value = "select count (distinct(bidDtl.maxBid)) as maxBid  from auctionDetail auction  inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId  inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId  where item.isactive=1 and item.auctionItemDetailId=:auctionItemDetailId  and bidDtl.isActive=1 and bidDtl.cstatus = 0",nativeQuery = true)
+    public int getCountdistinctMaxBid(@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+    @Query(value = "select bidDtl.bidderId from auctionDetail auction  inner join auctionItemDetail item on item.auctionDetailId=auction.auctionDetailId  inner join auctionBidDetail bidDtl on item.auctionItemDetailId=bidDtl.auctionItemDetailId  where item.isactive=1 and item.auctionItemDetailId=:auctionItemDetailId  and bidDtl.isActive=1 and bidDtl.cstatus = 0  order by bidDtl.createdOn",nativeQuery = true)
+    public List<Long> getBiddersBasedUponTimeCriteria(@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+
+    @Query("SELECT MAX(auctionBidDetail.maxBid) FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionItemDetail.auctionItemDetailId=:auctionItemDetailId AND auctionBidDetail.isActive=1 AND auctionBidDetail.cstatus=0 ")
+    public BigDecimal findMaxBidForItem(@Param("auctionItemDetailId") Long auctionItemDetailId);
+    @Query(" SELECT auctionBidDetail FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionItemDetail.auctionItemDetailId=:auctionItemDetailId AND auctionBidDetail.userLogin.userLoginId IN (:bidderIds) ")
+    List<AuctionBidDetail> findTimeWiseRejectList(@Param("bidderIds") List<Long> bidderIds,@Param("auctionItemDetailId") Long auctionItemDetailId);
 }
