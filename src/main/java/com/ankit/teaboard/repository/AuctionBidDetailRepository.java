@@ -66,4 +66,10 @@ public interface AuctionBidDetailRepository extends JpaRepository<AuctionBidDeta
     public BigDecimal findMaxBidForItem(@Param("auctionItemDetailId") Long auctionItemDetailId);
     @Query(" SELECT auctionBidDetail FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionItemDetail.auctionItemDetailId=:auctionItemDetailId AND auctionBidDetail.userLogin.userLoginId IN (:bidderIds) ")
     List<AuctionBidDetail> findTimeWiseRejectList(@Param("bidderIds") List<Long> bidderIds,@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+    @Query("SELECT auctionBidDetail FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionDetail.auctionDetailId=:auctionDetailId AND auctionBidDetail.isActive=1 ")
+    public List<AuctionBidDetail> getPreBidDetailsByAuctionDetailId(@Param("auctionDetailId") Long auctionDetailId);
+
+    @Query("SELECT auctionBidDetail FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionItemDetail.auctionItemDetailId =:auctionItemDetailId AND auctionBidDetail.isActive=1 ")
+    public List<AuctionBidDetail> getAuctionBidDetailByAuctionItemDetailId(@Param("auctionItemDetailId") Long auctionItemDetailId);
 }

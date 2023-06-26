@@ -17,4 +17,7 @@ public interface AuctionItemDetailRepository extends JpaRepository<AuctionItemDe
     @Query(value="SELECT TOP 20 * FROM AuctionItemDetail auctionItemDetail WHERE auctionItemDetail.auctionDetailId=:auctionDetailId AND auctionItemDetail.isActive=0 AND auctionItemDetail.cstatus=0 ",nativeQuery = true)
     List<AuctionItemDetail> getTop3Items(@Param("auctionDetailId") Long auctionDetailId);
 
+    @Query(value = "select item.auctionItemDetailId,count(bidDtl.auctionBidDetailId) from auctionItemDetail item left join auctionBidDetail bidDtl on bidDtl.auctionItemDetailId=item.auctionItemDetailId and bidDtl.cstatus = 0 where item.auctionItemDetailId=:auctionItemDetailId  group by item.auctionItemDetailId",nativeQuery = true)
+    List<Object[]> getItemWiseEligibleBidderCount(@Param("auctionItemDetailId") Long auctionItemDetailId);
+
 }

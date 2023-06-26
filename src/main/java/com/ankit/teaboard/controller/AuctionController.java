@@ -505,4 +505,10 @@ public class AuctionController {
         BigDecimal tst = auctionService.findBestBidFromAllCriteria(auctionItemDetailId);
         return tst;
     }
+
+    @PostMapping("/copyauction")
+    public ResponseEntity<ResponseDTO> copyAuction(@RequestParam("auctionDetailId") Long auctionDetailId){
+        boolean vbool = auctionService.copyAuction(auctionDetailId);
+        return ResponseEntity.ok(new ResponseDTO("Auction copied successfully",200));
+    }
 }

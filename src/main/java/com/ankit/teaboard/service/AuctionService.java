@@ -72,70 +72,31 @@ public class AuctionService {
             for (Object[] obj : liveBidData) {
                 Long itemDetailId = Long.parseLong(obj[0].toString());
                 if (!timeWisesoldItems.contains(itemDetailId)) {
-                BigDecimal maxQuotedBid = auctionBidDetailRepository.findMaxBidForItem(itemDetailId);
-                int scheduledCount = Integer.parseInt(obj[4].toString()) + 1;
-                BigDecimal basePrice = new BigDecimal(obj[5].toString());
-                int increment = Integer.parseInt(obj[6].toString());
-                int currentIteration = scheduledCount * increment;
-                BigDecimal currentPrice = new BigDecimal(obj[5].toString()).add(new BigDecimal(String.valueOf(currentIteration)));
-                BigDecimal reservePrice = new BigDecimal(obj[10].toString());
-                //CHECK IF ITEM IS ACTIVE OR NOT (SOLD OR NOT SOLD)
-                if (auctionItemL1DetailRepository.getItemStatus(itemDetailId) == null) {
-                    itemWiseSchedulerCount.add(itemDetailId);
-                    //CHECK IF NOT A SINGLE VENDOR AVAILABLE FOR ITEM
-                    if (itemWiseEligibleBidders.get(itemDetailId) == 0) {
-                        Map<Long, String> l1Map = this.getL1DetailsMap(auctionDetailId);
-                        String l1Data = l1Map.get(itemDetailId);
-                        Long bidderId = Long.parseLong(l1Data.split("_")[0]);
-                        BigDecimal finalBid = new BigDecimal(l1Data.split("_")[1]);
-                        AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
-                        auctionItemL1Detail.setCstatus(3);
-                        auctionItemL1Detail.setAmount(finalBid);
-                        auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
-                        auctionItemL1Detail.setUserLogin(null);
-                        auctionItemL1Detail.setAuctionDetail(auctionDetail);
-                        l1Details.add(auctionItemL1Detail);
-                        unsoldItems.add(itemDetailId);
-                        dynUpdate = true;
-                        unsoldItems.add(itemDetailId);
-                    } else {
-                        //CHECK IF L1 IS REACHED FOR CURRENT ITEM OR NOT
-                        if (itemWiseEligibleBidders.get(itemDetailId) == 1) {
+                    int eligibleBidders=0;
+                    List<Object[]> ls = auctionItemDetailRepository.getItemWiseEligibleBidderCount(itemDetailId);
+                    if(ls != null && !ls.isEmpty()){
+                        eligibleBidders = Integer.parseInt(ls.get(0)[1].toString());
+                    }
+                    BigDecimal maxQuotedBid = auctionBidDetailRepository.findMaxBidForItem(itemDetailId);
+                    int scheduledCount = Integer.parseInt(obj[4].toString()) + 1;
+                    BigDecimal basePrice = new BigDecimal(obj[5].toString());
+                    int increment = Integer.parseInt(obj[6].toString());
+                    int currentIteration = scheduledCount * increment;
+                    BigDecimal currentPrice = new BigDecimal(obj[5].toString()).add(new BigDecimal(String.valueOf(currentIteration)));
+                    BigDecimal reservePrice = new BigDecimal(obj[10].toString());
+                    //CHECK IF ITEM IS ACTIVE OR NOT (SOLD OR NOT SOLD)
+                    if (auctionItemL1DetailRepository.getItemStatus(itemDetailId) == null) {
+                        itemWiseSchedulerCount.add(itemDetailId);
+                        //CHECK IF NOT A SINGLE VENDOR AVAILABLE FOR ITEM
+                        if (eligibleBidders == 0 && auctionItemL1DetailRepository.getItemStatus(itemDetailId) == null) {
                             Map<Long, String> l1Map = this.getL1DetailsMap(auctionDetailId);
                             String l1Data = l1Map.get(itemDetailId);
                             Long bidderId = Long.parseLong(l1Data.split("_")[0]);
                             BigDecimal finalBid = new BigDecimal(l1Data.split("_")[1]);
-                            BigDecimal maxPrice = new BigDecimal(obj[3].toString());
-                            AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(itemDetailId, bidderId);
-                            //CHECK IF CURRENT PRICE IS GREATER THAN ITEM'S RESERVE PRICE
-
-                            //FINAL BID IS BASED UPON 2ND HIGHEST MAX BID
-                            //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
-                            //SO FIND BEST POSSIBLE BID
-                            BigDecimal bestBid = this.findBestBidFromAllCriteria(itemDetailId);
-                            if ((reservePrice.compareTo(finalBid) == -1 || reservePrice.compareTo(finalBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
-                                auctionBidDetail.setCstatus(1);
-                                auctionBidDetails.add(auctionBidDetail);
-                                soldItems.add(itemDetailId);
-                            /*AuctionBidHistory auctionBidHistory = new AuctionBidHistory();
-                            auctionBidHistory.setBidAmount(finalBid);
-                            auctionBidHistory.setAuctionBidDetail(auctionBidDetail);
-                            auctionBidHistory.setAuctionDetail(auctionDetail);
-                            auctionBidHistory.setCreatedOn(new Date());
-                            auctionBidHistory.setCreatedBy(Long.valueOf(obj[1].toString()));
-                            auctionBids.add(auctionBidHistory);*/
-                                AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
-                                auctionItemL1Detail.setCstatus(1);
-                                auctionItemL1Detail.setAmount(bestBid);
-                                auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
-                                auctionItemL1Detail.setUserLogin(new UserLogin(bidderId));
-                                auctionItemL1Detail.setAuctionDetail(auctionDetail);
-                                l1Details.add(auctionItemL1Detail);
-                                dynUpdate = true;
-                            } else {
+                            if(!unsoldItems.contains(itemDetailId)) {
                                 AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
                                 auctionItemL1Detail.setCstatus(3);
-                                auctionItemL1Detail.setAmount(bestBid);
+                                auctionItemL1Detail.setAmount(finalBid);
                                 auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
                                 auctionItemL1Detail.setUserLogin(null);
                                 auctionItemL1Detail.setAuctionDetail(auctionDetail);
@@ -143,47 +104,25 @@ public class AuctionService {
                                 unsoldItems.add(itemDetailId);
                                 dynUpdate = true;
                             }
-                        }
-                        //check item has reached max price and no of vendors with that price
-                        //allocate item based upon time criteria
-                        else if (currentPrice.compareTo(maxQuotedBid) == 0 || currentPrice.compareTo(maxQuotedBid) == 1) {
-                            List<AuctionBidDetail> timeWiseList = new ArrayList<>();
-                            if (currentPrice.compareTo(reservePrice) != -1) {
-                                if (checkDuplicateMaxBidForFinalVendors(itemDetailId)) {
-                                    List<Long> timeCriteriaList = auctionBidDetailRepository.getBiddersBasedUponTimeCriteria(itemDetailId);
-                                    if (timeCriteriaList != null && !timeCriteriaList.isEmpty()) {
-                                        Long finalVendorBasedUponTime = timeCriteriaList.get(0);
-                                        List<Long> timeWiseRejectedVendorList = new ArrayList<>();
-                                        timeCriteriaList.stream().forEach(
-                                                bidderId -> {
-                                                    if (!bidderId.equals(finalVendorBasedUponTime)) {
-                                                        timeWiseRejectedVendorList.add(bidderId);
-                                                    }
-                                                }
-                                        );
-                                        Map<Long, String> l1Map = this.getL1DetailsMap(auctionDetailId);
-                                        String l1Data = l1Map.get(itemDetailId);
-                                        Long bidderId = Long.parseLong(l1Data.split("_")[0]);
-                                        BigDecimal finalBid = new BigDecimal(l1Data.split("_")[1]);
-                                        BigDecimal maxPrice = new BigDecimal(obj[3].toString());
-                                        AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(itemDetailId, finalVendorBasedUponTime);
-                                        //CHECK IF CURRENT PRICE IS GREATER THAN ITEM'S RESERVE PRICE
+                        } else {
+                            //CHECK IF L1 IS REACHED FOR CURRENT ITEM OR NOT
+                            if (itemWiseEligibleBidders.get(itemDetailId) == 1) {
+                                Map<Long, String> l1Map = this.getL1DetailsMap(auctionDetailId);
+                                String l1Data = l1Map.get(itemDetailId);
+                                Long bidderId = Long.parseLong(l1Data.split("_")[0]);
+                                BigDecimal finalBid = new BigDecimal(l1Data.split("_")[1]);
+                                BigDecimal maxPrice = new BigDecimal(obj[3].toString());
+                                AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(itemDetailId, bidderId);
+                                //CHECK IF CURRENT PRICE IS GREATER THAN ITEM'S RESERVE PRICE
 
-                                        //FINAL BID IS BASED UPON 2ND HIGHEST MAX BID
-                                        //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
-                                        //SO FIND BEST POSSIBLE BID
-                                        BigDecimal bestBid = new BigDecimal(currentPrice.toString());
-                                        if ((reservePrice.compareTo(finalBid) == -1 || reservePrice.compareTo(finalBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
-                                            auctionBidDetail.setCstatus(1);
-                                            auctionBidDetails.add(auctionBidDetail);
-                                            soldItems.add(itemDetailId);
-                                            timeWisesoldItems.add(itemDetailId);
-
-                                            List<AuctionBidDetail> timeWiseRejectedVendors = auctionBidDetailRepository.findTimeWiseRejectList(timeWiseRejectedVendorList,itemDetailId);
-                                            for(AuctionBidDetail bidDtl:timeWiseRejectedVendors){
-                                                bidDtl.setCstatus(2);
-                                                auctionBidDetails.add(bidDtl);
-                                            }
+                                //FINAL BID IS BASED UPON 2ND HIGHEST MAX BID
+                                //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
+                                //SO FIND BEST POSSIBLE BID
+                                BigDecimal bestBid = this.findBestBidFromAllCriteria(itemDetailId);
+                                if ((reservePrice.compareTo(finalBid) == -1 || reservePrice.compareTo(finalBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
+                                    auctionBidDetail.setCstatus(1);
+                                    auctionBidDetails.add(auctionBidDetail);
+                                    soldItems.add(itemDetailId);
                             /*AuctionBidHistory auctionBidHistory = new AuctionBidHistory();
                             auctionBidHistory.setBidAmount(finalBid);
                             auctionBidHistory.setAuctionBidDetail(auctionBidDetail);
@@ -191,37 +130,109 @@ public class AuctionService {
                             auctionBidHistory.setCreatedOn(new Date());
                             auctionBidHistory.setCreatedBy(Long.valueOf(obj[1].toString()));
                             auctionBids.add(auctionBidHistory);*/
-                                            AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
-                                            auctionItemL1Detail.setCstatus(1);
-                                            auctionItemL1Detail.setAmount(bestBid);
-                                            auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
-                                            auctionItemL1Detail.setUserLogin(new UserLogin(finalVendorBasedUponTime));
-                                            auctionItemL1Detail.setAuctionDetail(auctionDetail);
-                                            l1Details.add(auctionItemL1Detail);
-                                            dynUpdate = true;
-                                        } else {
-                                            AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
-                                            auctionItemL1Detail.setCstatus(3);
-                                            auctionItemL1Detail.setAmount(bestBid);
-                                            auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
-                                            auctionItemL1Detail.setUserLogin(null);
-                                            auctionItemL1Detail.setAuctionDetail(auctionDetail);
-                                            l1Details.add(auctionItemL1Detail);
-                                            unsoldItems.add(itemDetailId);
-                                            dynUpdate = true;
-                                        }
+                                    AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                    auctionItemL1Detail.setCstatus(1);
+                                    auctionItemL1Detail.setAmount(bestBid);
+                                    auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                    auctionItemL1Detail.setUserLogin(new UserLogin(bidderId));
+                                    auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                                    l1Details.add(auctionItemL1Detail);
+                                    dynUpdate = true;
+                                } else {
+                                    if(!unsoldItems.contains(itemDetailId)) {
+                                        AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                        auctionItemL1Detail.setCstatus(3);
+                                        auctionItemL1Detail.setAmount(bestBid);
+                                        auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                        auctionItemL1Detail.setUserLogin(null);
+                                        auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                                        l1Details.add(auctionItemL1Detail);
+                                        unsoldItems.add(itemDetailId);
+                                        dynUpdate = true;
                                     }
                                 }
-
                             }
+                            //check item has reached max price and no of vendors with that price
+                            //allocate item based upon time criteria
+                            else if ((currentPrice.compareTo(maxQuotedBid) == 0 || currentPrice.compareTo(maxQuotedBid) == 1) && checkDuplicateMaxBidForFinalVendors(itemDetailId)) {
+                                List<AuctionBidDetail> timeWiseList = new ArrayList<>();
+                                if (currentPrice.compareTo(reservePrice) != -1) {
+                                    if (checkDuplicateMaxBidForFinalVendors(itemDetailId)) {
+                                        List<Long> timeCriteriaList = auctionBidDetailRepository.getBiddersBasedUponTimeCriteria(itemDetailId);
+                                        if (timeCriteriaList != null && !timeCriteriaList.isEmpty()) {
+                                            Long finalVendorBasedUponTime = timeCriteriaList.get(0);
+                                            List<Long> timeWiseRejectedVendorList = new ArrayList<>();
+                                            timeCriteriaList.stream().forEach(
+                                                    bidderId -> {
+                                                        if (!bidderId.equals(finalVendorBasedUponTime)) {
+                                                            timeWiseRejectedVendorList.add(bidderId);
+                                                        }
+                                                    }
+                                            );
+                                            Map<Long, String> l1Map = this.getL1DetailsMap(auctionDetailId);
+                                            String l1Data = l1Map.get(itemDetailId);
+                                            Long bidderId = Long.parseLong(l1Data.split("_")[0]);
+                                            BigDecimal finalBid = new BigDecimal(l1Data.split("_")[1]);
+                                            BigDecimal maxPrice = new BigDecimal(obj[3].toString());
+                                            AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(itemDetailId, finalVendorBasedUponTime);
+                                            //CHECK IF CURRENT PRICE IS GREATER THAN ITEM'S RESERVE PRICE
 
-                        } else {
-                            //CHECK IF BIDDER IS IN LEAGUE FOR CURRENT ITEM OR NOT
-                            if (Integer.parseInt(obj[9].toString()) == 0) {
+                                            //FINAL BID IS BASED UPON 2ND HIGHEST MAX BID
+                                            //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
+                                            //SO FIND BEST POSSIBLE BID
+                                            BigDecimal bestBid = new BigDecimal(currentPrice.toString());
+                                            if ((reservePrice.compareTo(bestBid) == -1 || reservePrice.compareTo(bestBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
+                                                auctionBidDetail.setCstatus(1);
+                                                auctionBidDetails.add(auctionBidDetail);
+                                                soldItems.add(itemDetailId);
+                                                timeWisesoldItems.add(itemDetailId);
 
-                                BigDecimal maxPrice = new BigDecimal(obj[3].toString());
-                                //CHECKING IF CURRENT PRICE IS NOT EXCEEDING BIDDER'S MAX BID
-                                if (currentPrice.compareTo(maxPrice) != 1) {
+                                                List<AuctionBidDetail> timeWiseRejectedVendors = auctionBidDetailRepository.findTimeWiseRejectList(timeWiseRejectedVendorList, itemDetailId);
+                                                for (AuctionBidDetail bidDtl : timeWiseRejectedVendors) {
+                                                    bidDtl.setCstatus(2);
+                                                    bidDtl.setCpAtExit(bestBid);
+                                                    auctionBidDetails.add(bidDtl);
+                                                }
+                            /*AuctionBidHistory auctionBidHistory = new AuctionBidHistory();
+                            auctionBidHistory.setBidAmount(finalBid);
+                            auctionBidHistory.setAuctionBidDetail(auctionBidDetail);
+                            auctionBidHistory.setAuctionDetail(auctionDetail);
+                            auctionBidHistory.setCreatedOn(new Date());
+                            auctionBidHistory.setCreatedBy(Long.valueOf(obj[1].toString()));
+                            auctionBids.add(auctionBidHistory);*/
+                                                AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                                auctionItemL1Detail.setCstatus(1);
+                                                auctionItemL1Detail.setAmount(bestBid);
+                                                auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                                auctionItemL1Detail.setUserLogin(new UserLogin(finalVendorBasedUponTime));
+                                                auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                                                l1Details.add(auctionItemL1Detail);
+                                                dynUpdate = true;
+                                            } else {
+                                                if(!unsoldItems.contains(itemDetailId)) {
+                                                    AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                                    auctionItemL1Detail.setCstatus(3);
+                                                    auctionItemL1Detail.setAmount(bestBid);
+                                                    auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                                    auctionItemL1Detail.setUserLogin(null);
+                                                    auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                                                    l1Details.add(auctionItemL1Detail);
+                                                    unsoldItems.add(itemDetailId);
+                                                    dynUpdate = true;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                            } else {
+                                //CHECK IF BIDDER IS IN LEAGUE FOR CURRENT ITEM OR NOT
+                                if (Integer.parseInt(obj[9].toString()) == 0) {
+
+                                    BigDecimal maxPrice = new BigDecimal(obj[3].toString());
+                                    //CHECKING IF CURRENT PRICE IS NOT EXCEEDING BIDDER'S MAX BID
+                                    if (currentPrice.compareTo(maxPrice) != 1) {
                                 /*AuctionBidHistory auctionBidHistory = new AuctionBidHistory();
                                 auctionBidHistory.setBidAmount(new BigDecimal(obj[5].toString()).add(new BigDecimal(String.valueOf(currentIteration))));
                                 auctionBidHistory.setAuctionBidDetail(new AuctionBidDetail(Long.valueOf(obj[2].toString())));
@@ -229,21 +240,21 @@ public class AuctionService {
                                 auctionBidHistory.setCreatedOn(new Date());
                                 auctionBidHistory.setCreatedBy(Long.valueOf(obj[1].toString()));
                                 auctionBids.add(auctionBidHistory);*/
-                                } else {
-                                    //SET IF CURRENT PRICE IS GREATER THAN MAX BID (OUT OF ITEM)
-                                    dynUpdate = true;
-                                    AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.findById(Long.parseLong(obj[2].toString())).get();
-                                    if (auctionBidDetail.getCstatus() != 3) {
-                                        auctionBidDetail.setCstatus(2);
-                                        //ADDED AT LAST TO SEE AT WHICH RATE BIDDER GOT OUT BY SYSTEM
-                                        auctionBidDetail.setCpAtExit(currentPrice);
+                                    } else {
+                                        //SET IF CURRENT PRICE IS GREATER THAN MAX BID (OUT OF ITEM)
+                                        dynUpdate = true;
+                                        AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.findById(Long.parseLong(obj[2].toString())).get();
+                                        if (auctionBidDetail.getCstatus() != 3) {
+                                            auctionBidDetail.setCstatus(2);
+                                            //ADDED AT LAST TO SEE AT WHICH RATE BIDDER GOT OUT BY SYSTEM
+                                            auctionBidDetail.setCpAtExit(currentPrice);
+                                        }
+                                        auctionBidDetails.add(auctionBidDetail);
                                     }
-                                    auctionBidDetails.add(auctionBidDetail);
                                 }
                             }
                         }
                     }
-                }
             }
             }
             if(auctionBidDetails != null && !auctionBidDetails.isEmpty()) {
@@ -252,6 +263,24 @@ public class AuctionService {
             //auctionBidHistoryRepository.saveAll(auctionBids);
             if(l1Details != null && !l1Details.isEmpty()) {
                 auctionItemL1DetailRepository.saveAll(l1Details);
+            }
+            for(AuctionItemDetail auctionItemDetail:currentActiveItems) {
+                int eligibleBidders=0;
+                List<Object[]> ls = auctionItemDetailRepository.getItemWiseEligibleBidderCount(auctionItemDetail.getAuctionItemDetailId());
+                if(ls != null && !ls.isEmpty()){
+                    eligibleBidders = Integer.parseInt(ls.get(0)[1].toString());
+                }
+                if (eligibleBidders == 0 && auctionItemL1DetailRepository.getItemStatus(auctionItemDetail.getAuctionItemDetailId()) == null) {
+                    AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                    auctionItemL1Detail.setCstatus(3);
+                    auctionItemL1Detail.setAmount(auctionItemDetail.getCurrentPrice());
+                    auctionItemL1Detail.setAuctionItemDetail(auctionItemDetail);
+                    auctionItemL1Detail.setUserLogin(null);
+                    auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                    l1Details.add(auctionItemL1Detail);
+                    unsoldItems.add(auctionItemDetail.getAuctionItemDetailId());
+                    dynUpdate = true;
+                }
             }
             if(unsoldItems != null && !unsoldItems.isEmpty()){
                 List<AuctionBidDetail> items = auctionBidDetailRepository.getAuctionBidDetailsByAuctionItemDetailId(unsoldItems);
@@ -276,6 +305,7 @@ public class AuctionService {
             );
             auctionItemDetailRepository.saveAll(currentActiveItems);
         }
+
         if(dynUpdate){
             //DYNAMIC UPDATE SERVER CALL
             this.template.convertAndSend("/broadcast/biddingdashboarddyn/" + auctionDetailId, new SimpleDateFormat("HH:mm:ss").format(new Date()) + "-" + auctionDetailId);
@@ -475,5 +505,55 @@ public class AuctionService {
             Long finalVendorBasedUponTime = timeCriteriaList.get(0);
 
         }
+    }
+
+    public boolean copyAuction(Long auctionDetailId){
+        //Copy Auction Data
+        AuctionDetail existingAuctionDetail = auctionDetailRepository.findById(auctionDetailId).get();
+        AuctionDetail newAuctionDetail = new AuctionDetail();
+        newAuctionDetail.setAuctionBrief(existingAuctionDetail.getAuctionBrief());
+        newAuctionDetail.setCreatedBy(existingAuctionDetail.getCreatedBy());
+        newAuctionDetail.setStartDate(existingAuctionDetail.getStartDate());
+        newAuctionDetail.setEndDate(existingAuctionDetail.getEndDate());
+        newAuctionDetail.setCstatus(0);
+        newAuctionDetail.setCreatedOn(new Date());
+        auctionDetailRepository.save(newAuctionDetail);
+        List<AuctionItemDetail> existingAuctionItems = auctionItemDetailRepository.getAuctionItemsByAuctionDetailId(auctionDetailId);
+        List<AuctionItemDetail> newAuctionItems = new ArrayList<>();
+        AuctionItemDetail auctionItemDetail = null;
+        for(AuctionItemDetail existingAuctionItemDetail:existingAuctionItems){
+            auctionItemDetail = new AuctionItemDetail();
+            auctionItemDetail.setAuctionDetail(newAuctionDetail);
+            auctionItemDetail.setCreatedBy(existingAuctionDetail.getCreatedBy());
+            auctionItemDetail.setCreatedOn(new Date());
+            auctionItemDetail.setCstatus(0);
+            auctionItemDetail.setIsActive(0);
+            auctionItemDetail.setSerialNo(existingAuctionItemDetail.getSerialNo());
+            auctionItemDetail.setLotNo(existingAuctionItemDetail.getLotNo());
+            auctionItemDetail.setCategory(existingAuctionItemDetail.getCategory());
+            auctionItemDetail.setGrade(existingAuctionItemDetail.getGrade());
+            auctionItemDetail.setItemPackage(existingAuctionItemDetail.getItemPackage());
+            auctionItemDetail.setBasePrice(existingAuctionItemDetail.getBasePrice());
+            auctionItemDetail.setCurrentPrice(existingAuctionItemDetail.getBasePrice());
+            auctionItemDetail.setReservePrice(existingAuctionItemDetail.getReservePrice());
+            auctionItemDetail.setIncrement(existingAuctionItemDetail.getIncrement());
+            auctionItemDetailRepository.save(auctionItemDetail);
+            List<AuctionBidDetail> existingAuctionBidDetails = auctionBidDetailRepository.getAuctionBidDetailByAuctionItemDetailId(existingAuctionItemDetail.getAuctionItemDetailId());
+            List<AuctionBidDetail> toBeAdded = new ArrayList<>();
+                for(AuctionBidDetail auctionBidDetail:existingAuctionBidDetails){
+                    AuctionBidDetail newAbd =  new AuctionBidDetail();
+                    newAbd.setAuctionDetail(newAuctionDetail);
+                    newAbd.setAuctionItemDetail(auctionItemDetail);
+                    newAbd.setUserLogin(auctionBidDetail.getUserLogin());
+                    newAbd.setMaxBid(auctionBidDetail.getMaxBid());
+                    newAbd.setIsActive(1);
+                    newAbd.setCstatus(0);
+                    newAbd.setCreatedBy(auctionBidDetail.getCreatedBy());
+                    newAbd.setCreatedOn(new Date());
+                    toBeAdded.add(newAbd);
+                }
+            auctionBidDetailRepository.saveAll(toBeAdded);
+        }
+        return true;
     }
 }
