@@ -225,6 +225,19 @@ public class AuctionService {
                                     }
 
                                 }
+                                else{
+                                    if(!unsoldItems.contains(itemDetailId)) {
+                                        AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                        auctionItemL1Detail.setCstatus(3);
+                                        auctionItemL1Detail.setAmount(currentPrice);
+                                        auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                        auctionItemL1Detail.setUserLogin(null);
+                                        auctionItemL1Detail.setAuctionDetail(auctionDetail);
+                                        l1Details.add(auctionItemL1Detail);
+                                        unsoldItems.add(itemDetailId);
+                                        dynUpdate = true;
+                                    }
+                                }
 
                             } else {
                                 //CHECK IF BIDDER IS IN LEAGUE FOR CURRENT ITEM OR NOT
@@ -463,7 +476,7 @@ public class AuctionService {
                     BigDecimal maxPrice = new BigDecimal(obj[3].toString());
                     AuctionBidDetail auctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(auctionItemDetailId, bidderId);
                     BigDecimal bestBid = this.findBestBidFromAllCriteria(auctionItemDetailId);
-                    if (reservePrice.compareTo(finalBid) == -1 && maxPrice.compareTo(reservePrice) == 1) {
+                    if ((reservePrice.compareTo(bestBid) == -1 || reservePrice.compareTo(bestBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
                         auctionBidDetail.setCstatus(1);
                         auctionBidDetailRepository.save(auctionBidDetail);
                         AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
@@ -482,6 +495,14 @@ public class AuctionService {
                         auctionItemL1Detail.setUserLogin(null);
                         auctionItemL1Detail.setAuctionDetail(new AuctionDetail(auctionDetailId));
                         auctionItemL1DetailRepository.save(auctionItemL1Detail);
+                            List<AuctionBidDetail> items = auctionBidDetailRepository.getAuctionBidDetailsByAuctionItemDetailId(List.of(auctionItemDetailId));
+                            if(items != null && !items.isEmpty()){
+                                items.stream().forEach(
+                                        item -> item.setCstatus(3)
+                                );
+                                auctionBidDetailRepository.saveAll(items);
+                                System.out.println("ITEMS UNSOLD FLAG SET");
+                            }
                     }
             }
         }
