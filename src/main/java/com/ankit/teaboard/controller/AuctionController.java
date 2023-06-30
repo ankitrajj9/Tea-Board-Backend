@@ -398,33 +398,46 @@ public class AuctionController {
         AuctionItemDetail auctionItemDetail = auctionItemDetailRepository.findById(auctionItemDetailId).get();
         Long auctionId = auctionItemDetail.getAuctionDetail().getAuctionDetailId();
         AuctionBidDetail existingAuctionBidDetail = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(auctionItemDetailId, bidderId);
-        if (existingAuctionBidDetail.getCstatus() == 0){
-        existingAuctionBidDetail.setIsActive(0);
-        existingAuctionBidDetail.setCpAtMb(auctionItemDetail.getCurrentPrice());
-        auctionBidDetailRepository.save(existingAuctionBidDetail);
-        AuctionBidDetail auctionBidDetail = new AuctionBidDetail();
-        auctionBidDetail.setAuctionDetail(new AuctionDetail(auctionId));
-        auctionBidDetail.setAuctionItemDetail(auctionItemDetail);
-        auctionBidDetail.setUserLogin(new UserLogin(bidderId));
-        auctionBidDetail.setMaxBid(maxBid);
-        auctionBidDetail.setIsActive(1);
-        auctionBidDetail.setCreatedBy(bidderId);
-        auctionBidDetail.setCreatedOn(new Date());
-        auctionBidDetail.setCstatus(0);
-        auctionBidDetail.setCpAtMb(auctionItemDetail.getCurrentPrice());
-        auctionBidDetailRepository.save(auctionBidDetail);
-        this.template.convertAndSend("/broadcast/biddingdashboarddyn/" + auctionId, new SimpleDateFormat("HH:mm:ss").format(new Date()) + "-" + auctionId);
-        return ResponseEntity.ok(new ResponseDTO("Max Bid changed Successfully",200));
-        }
-        else if(existingAuctionBidDetail.getCstatus() == 1){
-            return ResponseEntity.ok(new ResponseDTO("Item is already alloted to you",200));
-        }
-        else if(existingAuctionBidDetail.getCstatus() == 2 || existingAuctionBidDetail.getCstatus() == 4){
-            return ResponseEntity.ok(new ResponseDTO("Item is already sold",200));
+        int scheduledCount = auctionItemDetail.getSchedulerCount() + 1;
+        BigDecimal basePrice = auctionItemDetail.getBasePrice();
+        int increment = auctionItemDetail.getIncrement();
+        int currentIteration = scheduledCount * increment;
+        BigDecimal currentIterationPrice = basePrice.add(new BigDecimal(String.valueOf(currentIteration)));
+        System.out.println("CURRENT ITERATION PRICE : "+currentIterationPrice);
+        if (maxBid.compareTo(auctionItemDetail.getCurrentPrice()) == 1 && maxBid.compareTo(currentIterationPrice) == 1){
+            if (existingAuctionBidDetail.getCstatus() == 0) {
+                existingAuctionBidDetail.setIsActive(0);
+                existingAuctionBidDetail.setCpAtMb(auctionItemDetail.getCurrentPrice());
+                auctionBidDetailRepository.save(existingAuctionBidDetail);
+                AuctionBidDetail auctionBidDetail = new AuctionBidDetail();
+                auctionBidDetail.setAuctionDetail(new AuctionDetail(auctionId));
+                auctionBidDetail.setAuctionItemDetail(auctionItemDetail);
+                auctionBidDetail.setUserLogin(new UserLogin(bidderId));
+                auctionBidDetail.setMaxBid(maxBid);
+                auctionBidDetail.setIsActive(1);
+                auctionBidDetail.setCreatedBy(bidderId) ;
+                auctionBidDetail.setCreatedOn(new Date());
+                auctionBidDetail.setCstatus(0);
+                auctionBidDetail.setCpAtMb(auctionItemDetail.getCurrentPrice());
+                auctionBidDetailRepository.save(auctionBidDetail);
+                this.template.convertAndSend("/broadcast/biddingdashboarddyn/" + auctionId, new SimpleDateFormat("HH:mm:ss").format(new Date()) + "-" + auctionId);
+                return ResponseEntity.ok(new ResponseDTO("Max Bid changed Successfully", 200));
+            } else if (existingAuctionBidDetail.getCstatus() == 1) {
+                return ResponseEntity.ok(new ResponseDTO("Item is already alloted to you", 200));
+            } else if (existingAuctionBidDetail.getCstatus() == 2 || existingAuctionBidDetail.getCstatus() == 4) {
+                return ResponseEntity.ok(new ResponseDTO("Item is already sold", 200));
+            } else {
+                return ResponseEntity.ok(new ResponseDTO("Item is already went Unsold", 200));
+            }
+    }
+        else{
+            if(maxBid.compareTo(currentIterationPrice) == 1 || maxBid.compareTo(currentIterationPrice) == 0) {
+                return ResponseEntity.ok(new ResponseDTO("Item's Price has reached iteration for amount: "+maxBid, 200));
         }
         else{
-            return ResponseEntity.ok(new ResponseDTO("Item is already went Unsold",200));
-    }
+                return ResponseEntity.ok(new ResponseDTO("Item's Price has exceeded your max bid", 200));
+        }
+        }
 
     }
 
