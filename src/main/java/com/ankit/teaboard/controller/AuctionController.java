@@ -201,14 +201,17 @@ public class AuctionController {
     public ResponseEntity<ResponseDTO> addAllPreBidDetails(@RequestBody List<PreBidDetailDTO> preBidDetails){
         Long bidderId = preBidDetails.get(0).getBidderId();
         Long auctionItemDetailId = preBidDetails.get(0).getAuctionItemDetailId();
-        AuctionBidDetail savedBidDtl = auctionBidDetailRepository.getPreBidDetailsByAuctionItemDetailIdAndUserLoginId(auctionItemDetailId,bidderId);
-        if(savedBidDtl != null) {
-            Long auctionDetailId = savedBidDtl.getAuctionDetail().getAuctionDetailId();
-            List<AuctionBidDetail> savedBidDtlToDelete = auctionBidDetailRepository.getPreBidDetailsByAuctionDetailIdAndUserLoginId(auctionDetailId, bidderId);
-            if (savedBidDtlToDelete != null && !savedBidDtlToDelete.isEmpty()) {
-                auctionBidDetailRepository.deleteAll(savedBidDtlToDelete);
+        Long auctionDetailId = auctionItemDetailRepository.findById(auctionItemDetailId).get().getAuctionDetail().getAuctionDetailId();
+        List<AuctionBidDetail> savedBidDtl = auctionBidDetailRepository.getPreBidDetailsByAuctionDetailIdAndUserLoginId(auctionDetailId,bidderId);
+        if(savedBidDtl != null && !savedBidDtl.isEmpty()) {
+            savedBidDtl.stream().forEach(
+                    bidDtl -> {
+                        bidDtl.setIsActive(0);
+                        bidDtl.setUpdatedOn(new Date());
+                    }
+            );
+                auctionBidDetailRepository.saveAll(savedBidDtl);
                 System.out.println("SAVED BID DELETED");
-            }
         }
         List<AuctionBidDetail> bidDetails = new ArrayList<>();
         for(PreBidDetailDTO preBid:preBidDetails) {

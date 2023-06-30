@@ -37,6 +37,7 @@ public class AuctionBidDetail {
 
     private Date createdOn;
     private Long createdBy;
+    private Date updatedOn;
 
     public AuctionBidDetail(Long auctionBidDetailId){
         this.auctionBidDetailId=auctionBidDetailId;
