@@ -431,7 +431,7 @@ public class AuctionController {
             }
     }
         else{
-            if(maxBid.compareTo(currentIterationPrice) == 1 || maxBid.compareTo(currentIterationPrice) == 0) {
+            if(currentIterationPrice.compareTo(maxBid) == 1 || maxBid.compareTo(currentIterationPrice) == 0) {
                 return ResponseEntity.ok(new ResponseDTO("Item's Price has reached iteration for amount: "+maxBid, 200));
         }
         else{
