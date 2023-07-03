@@ -17,4 +17,7 @@ public interface AuctionDetailRepository extends JpaRepository<AuctionDetail,Lon
 
     @Query("SELECT auctionDetail FROM AuctionDetail auctionDetail ORDER BY auctionDetail.auctionDetailId DESC ")
     List<AuctionDetail> getAllAuctions();
+
+    @Query("SELECT auctionDetail FROM AuctionDetail auctionDetail WHERE auctionDetail.auctionBrief like %:param% or auctionDetail.auctionDetailId like %:param% ORDER BY auctionDetail.auctionDetailId DESC")
+    public List<AuctionDetail> searchAuctions(@Param("param") String param);
 }

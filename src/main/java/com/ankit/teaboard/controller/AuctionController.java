@@ -153,6 +153,22 @@ public class AuctionController {
         ).collect(Collectors.toList());
         return auctions;
     }
+
+    @GetMapping("/searchauctions/{param}/{userLoginId}")
+    public List<AuctionDetailDTO> searchAuctions(@PathVariable("param") String param,@PathVariable("userLoginId") Long userLoginId) {
+        System.out.println("search auctions called");
+        UserLogin sessionUser = userLoginRepository.findById(userLoginId).get();
+        Map<String,Object> map = null;
+        List<AuctionDetailDTO> list = new ArrayList<>();
+        List<AuctionDetail> auctionDetails = auctionDetailRepository.searchAuctions(param);
+        if(auctionDetails != null && !auctionDetails.isEmpty()) {
+            for(AuctionDetail auctionDetail:auctionDetails) {
+                AuctionDetailDTO auctionDetailDTO = modelMapper.map(auctionDetail,AuctionDetailDTO.class);
+                list.add(auctionDetailDTO);
+            }
+        }
+        return list;
+    }
     @GetMapping("/getallliveauctions")
     public List<AuctionDetailDTO> getAllLiveAuctions(){
         List<AuctionDetailDTO> auctions = auctionDetailRepository.getLiveAuctions(new Date()).stream().map(

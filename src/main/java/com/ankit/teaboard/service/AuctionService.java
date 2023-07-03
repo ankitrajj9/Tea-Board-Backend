@@ -119,7 +119,7 @@ public class AuctionService {
                                 //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
                                 //SO FIND BEST POSSIBLE BID
                                 BigDecimal bestBid = this.findBestBidFromAllCriteria(itemDetailId);
-                                if ((reservePrice.compareTo(finalBid) == -1 || reservePrice.compareTo(finalBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
+                                if ((reservePrice.compareTo(bestBid) == -1 || reservePrice.compareTo(bestBid) == 0) && (maxPrice.compareTo(reservePrice) == 1 || maxPrice.compareTo(reservePrice) == 0)) {
                                     auctionBidDetail.setCstatus(1);
                                     auctionBidDetails.add(auctionBidDetail);
                                     soldItems.add(itemDetailId);
@@ -445,6 +445,12 @@ public class AuctionService {
                 }
             }
         }
+        //WHEN ONLY ONE BIDDER IS THERE WITH MBP>RP
+        else{
+            BigDecimal finalBid = new BigDecimal(reservePrice.toString());
+            return finalBid;
+
+        }
         return null;
     }
 
@@ -488,21 +494,33 @@ public class AuctionService {
                         auctionItemL1DetailRepository.save(auctionItemL1Detail);
                     }
                     else {
-                        AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                        if (auctionBidDetail.getMaxBid().compareTo(reservePrice) == 0) {
+                            auctionBidDetail.setCstatus(1);
+                            auctionBidDetailRepository.save(auctionBidDetail);
+                            AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                            auctionItemL1Detail.setCstatus(1);
+                            auctionItemL1Detail.setAmount(auctionBidDetail.getMaxBid());
+                            auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(auctionItemDetailId));
+                            auctionItemL1Detail.setUserLogin(new UserLogin(bidderId));
+                            auctionItemL1Detail.setAuctionDetail(new AuctionDetail(auctionDetailId));
+                            auctionItemL1DetailRepository.save(auctionItemL1Detail);
+                        } else{
+                            AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
                         auctionItemL1Detail.setCstatus(3);
                         auctionItemL1Detail.setAmount(bestBid);
                         auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(auctionItemDetailId));
                         auctionItemL1Detail.setUserLogin(null);
                         auctionItemL1Detail.setAuctionDetail(new AuctionDetail(auctionDetailId));
                         auctionItemL1DetailRepository.save(auctionItemL1Detail);
-                            List<AuctionBidDetail> items = auctionBidDetailRepository.getAuctionBidDetailsByAuctionItemDetailId(List.of(auctionItemDetailId));
-                            if(items != null && !items.isEmpty()){
-                                items.stream().forEach(
-                                        item -> item.setCstatus(3)
-                                );
-                                auctionBidDetailRepository.saveAll(items);
-                                System.out.println("ITEMS UNSOLD FLAG SET");
-                            }
+                        List<AuctionBidDetail> items = auctionBidDetailRepository.getAuctionBidDetailsByAuctionItemDetailId(List.of(auctionItemDetailId));
+                        if (items != null && !items.isEmpty()) {
+                            items.stream().forEach(
+                                    item -> item.setCstatus(3)
+                            );
+                            auctionBidDetailRepository.saveAll(items);
+                            System.out.println("ITEMS UNSOLD FLAG SET");
+                        }
+                    }
                     }
             }
         }
