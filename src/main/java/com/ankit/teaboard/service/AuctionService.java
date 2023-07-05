@@ -411,12 +411,13 @@ public class AuctionService {
                         bidDetailId = Long.parseLong(obj[0].toString());
                     }
                     BigDecimal maxBidOfLastExitedVendor = auctionBidDetailRepository.findById(bidDetailId).get().getMaxBid();
+                    BigDecimal cpAtExitOfLastExitedVendor = auctionBidDetailRepository.findById(bidDetailId).get().getCpAtExit();
 
                     if(maxBidOfLastExitedVendor.compareTo(reservePrice) != -1){
                         if(ifPriceHasReached(auctionItemDetail,maxBidOfLastExitedVendor)) {
                             finalBid = maxBidOfLastExitedVendor.add(increment);
                         }else{
-                            finalBid = reservePrice.add(increment);
+                            finalBid = cpAtExitOfLastExitedVendor.compareTo(reservePrice) != -1 ? cpAtExitOfLastExitedVendor.add(increment) : reservePrice.add(increment);
                         }
                     }
                     else{
