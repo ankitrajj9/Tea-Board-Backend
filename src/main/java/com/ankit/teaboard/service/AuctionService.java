@@ -181,7 +181,7 @@ public class AuctionService {
                                             //SO IF SOMEONE PUT HIGHER BID AND EXITED EARLIER THE L1 BIDDER WOULD GET LOSS
                                             //SO FIND BEST POSSIBLE BID
                                             BigDecimal bestBid = new BigDecimal(currentPrice.toString());
-                                            if ((reservePrice.compareTo(bestBid) == -1 || reservePrice.compareTo(bestBid) == 0) && maxPrice.compareTo(reservePrice) == 1) {
+                                            if ((reservePrice.compareTo(bestBid) == -1 || reservePrice.compareTo(bestBid) == 0) && (maxPrice.compareTo(reservePrice) == 1 || maxPrice.compareTo(reservePrice) == 0)) {
                                                 auctionBidDetail.setCstatus(1);
                                                 auctionBidDetails.add(auctionBidDetail);
                                                 soldItems.add(itemDetailId);
