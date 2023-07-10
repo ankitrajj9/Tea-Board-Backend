@@ -427,6 +427,7 @@ public class AuctionController {
             if (existingAuctionBidDetail.getCstatus() == 0) {
                 existingAuctionBidDetail.setIsActive(0);
                 existingAuctionBidDetail.setCpAtMb(auctionItemDetail.getCurrentPrice());
+                existingAuctionBidDetail.setUpdatedOn(new Date());
                 auctionBidDetailRepository.save(existingAuctionBidDetail);
                 AuctionBidDetail auctionBidDetail = new AuctionBidDetail();
                 auctionBidDetail.setAuctionDetail(new AuctionDetail(auctionId));
@@ -469,6 +470,7 @@ public class AuctionController {
             existingAuctionBidDetail.setIsActive(1);
             existingAuctionBidDetail.setCstatus(4);
             existingAuctionBidDetail.setCpAtExit(auctionItemDetail.getCurrentPrice());
+            existingAuctionBidDetail.setUpdatedOn(new Date());
             auctionBidDetailRepository.save(existingAuctionBidDetail);
             this.template.convertAndSend("/broadcast/biddingdashboarddyn/" + auctionId, new SimpleDateFormat("HH:mm:ss").format(new Date()) + "-" + auctionId);
             Map<Long,Integer> itemWiseEligibleBidders = auctionService.getItemWiseEligibleBiddersCountByItemDetailId(auctionId,auctionItemDetailId);
