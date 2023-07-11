@@ -1,10 +1,7 @@
 package com.ankit.teaboard.controller;
 
 import com.ankit.teaboard.dto.apidto.*;
-import com.ankit.teaboard.dto.entitydto.AuctionBidDetailDTO;
-import com.ankit.teaboard.dto.entitydto.AuctionDetailDTO;
-import com.ankit.teaboard.dto.entitydto.AuctionItemDetailDTO;
-import com.ankit.teaboard.dto.entitydto.UserLoginDTO;
+import com.ankit.teaboard.dto.entitydto.*;
 import com.ankit.teaboard.entity.*;
 import com.ankit.teaboard.repository.*;
 import com.ankit.teaboard.service.AuctionSchedulerService;
@@ -27,10 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -46,6 +40,9 @@ public class AuctionController {
     private AuctionDetailRepository auctionDetailRepository;
     @Autowired
     private AuctionItemDetailRepository auctionItemDetailRepository;
+
+    @Autowired
+    private AuctionItemDetailDescriptionRepository auctionItemDetailDescriptionRepository;
 
     @Autowired
     private AuctionBidDetailRepository auctionBidDetailRepository;
@@ -301,14 +298,18 @@ public class AuctionController {
                 XSSFWorkbook workbook = new XSSFWorkbook(excel.getInputStream());
                 XSSFSheet sheet = workbook.getSheetAt(0);
                 List<AuctionItemDetail> auctionItemsToAdd = new ArrayList<>();
+                List<AuctionItemDetailDescription> auctionItemDescriptionsToAdd = new ArrayList<>();
                 for(int i=0; i<sheet.getPhysicalNumberOfRows();i++) {
                     if (i != 0){
                         AuctionItemDetail auctionItemDetail = new AuctionItemDetail();
-                    auctionItemDetail.setAuctionDetail(new AuctionDetail(auctionDetailId));
+                        AuctionItemDetailDescription auctionItemDetailDescription = new AuctionItemDetailDescription();
+                        auctionItemDetail.setAuctionDetail(new AuctionDetail(auctionDetailId));
                         auctionItemDetail.setCreatedBy(userLoginId);
                         auctionItemDetail.setCreatedOn(new Date());
                         auctionItemDetail.setCstatus(0);
                         auctionItemDetail.setIsActive(0);
+
+                        auctionItemDetailDescription.setAuctionItemDetail(auctionItemDetail);
                     XSSFRow row = sheet.getRow(i);
                     for (int j = 0; j < row.getPhysicalNumberOfCells(); j++) {
                         System.out.print(row.getCell(j) + " ");
@@ -340,15 +341,95 @@ public class AuctionController {
                             case 7:
                                 auctionItemDetail.setIncrement(Integer.parseInt(row.getCell(index).toString().split("[.]", 0)[0]));
                                 break;
+                            case 8:
+                                auctionItemDetailDescription.setOrigin(row.getCell(index).toString());
+                                break;
+                            case 9:
+                                auctionItemDetailDescription.setType(row.getCell(index).toString());
+                                break;
+                            case 10:
+                                auctionItemDetailDescription.setSubType(row.getCell(index).toString());
+                                break;
+                            case 11:
+                                auctionItemDetailDescription.setMark(row.getCell(index).toString());
+                                break;
+                            case 12:
+                                auctionItemDetailDescription.setStatus(row.getCell(index).toString());
+                                break;
+                            case 13:
+                                auctionItemDetailDescription.setNetWeight(row.getCell(index).toString());
+                                break;
+                            case 14:
+                                auctionItemDetailDescription.setGrossWeight(row.getCell(index).toString());
+                                break;
+                            case 15:
+                                auctionItemDetailDescription.setTotalNetWeight(row.getCell(index).toString());
+                                break;
+                            case 16:
+                                auctionItemDetailDescription.setManufacturePercentage(Integer.parseInt(row.getCell(index).toString().split("[.]", 0)[0]));
+                                break;
+                            case 17:
+                                auctionItemDetailDescription.setPackageComments(row.getCell(index).toString());
+                                break;
+                            case 18:
+                                auctionItemDetailDescription.setLotType(row.getCell(index).toString());
+                                break;
+                            case 19:
+                                auctionItemDetailDescription.setGpNo(row.getCell(index).toString());
+                                break;
+                            case 20:
+                                auctionItemDetailDescription.setGpDate(new Date(row.getCell(index).toString()));
+                                break;
+                            case 21:
+                                auctionItemDetailDescription.setInvoiceNo(row.getCell(index).toString());
+                                break;
+                            case 22:
+                                auctionItemDetailDescription.setLspSp(row.getCell(index).toString());
+                                break;
+                            case 23:
+                                auctionItemDetailDescription.setPl(row.getCell(index).toString());
+                                break;
+                            case 24:
+                                auctionItemDetailDescription.setPackageNo(row.getCell(index).toString());
+                                break;
+                            case 25:
+                                auctionItemDetailDescription.setWarehouseName(row.getCell(index).toString());
+                                break;
+                            case 26:
+                                auctionItemDetailDescription.setGarden(row.getCell(index).toString());
+                                break;
+                            case 27:
+                                auctionItemDetailDescription.setSpecial(row.getCell(index).toString());
+                                break;
+                            case 28:
+                                auctionItemDetailDescription.setQuality(row.getCell(index).toString());
+                                break;
+                            case 29:
+                                auctionItemDetailDescription.setColor(row.getCell(index).toString());
+                                break;
+                            case 30:
+                                auctionItemDetailDescription.setAge(Integer.parseInt(row.getCell(index).toString().split("[.]", 0)[0]));
+                                break;
+                            case 31:
+                                auctionItemDetailDescription.setBrewer(row.getCell(index).toString());
+                                break;
+                            case 32:
+                                auctionItemDetailDescription.setNoOfBidders(Integer.parseInt(row.getCell(index).toString().split("[.]", 0)[0]));
+                                break;
+                            case 33:
+                                auctionItemDetailDescription.setActiveSince(new Date());
+                                break;
                         }
                     }
                     System.out.println("");
                     auctionItemsToAdd.add(auctionItemDetail);
+                    auctionItemDescriptionsToAdd.add(auctionItemDetailDescription);
                 }
                 }
                 if(auctionItemsToAdd != null && !auctionItemsToAdd.isEmpty()){
                     System.out.println(auctionItemsToAdd);
                     auctionItemDetailRepository.saveAll(auctionItemsToAdd);
+                    auctionItemDetailDescriptionRepository.saveAll(auctionItemDescriptionsToAdd);
                     System.out.println("ITEMS ADDED");
                 }
             }
@@ -385,16 +466,20 @@ public class AuctionController {
         List<LiveBidDetailDTO> liveBids = null;
         LiveBidDetailDTO liveBidDetailDTO = null;
         List<Object[]> bids = auctionBidDetailRepository.getBidderWiseLiveBidData(auctionDetailId,bidderId);
+        UserLogin userLogin = userLoginRepository.findById(bidderId).get();
         if(bids != null && !bids.isEmpty()){
             liveBids = new ArrayList<>();
             for(Object[] obj:bids) {
                 AuctionItemDetailDTO auctionItemDetailDTO = modelMapper.map(auctionItemDetailRepository.findById(Long.parseLong(obj[0].toString())).get(),AuctionItemDetailDTO.class) ;
+                AuctionItemDetailDescriptionDTO auctionItemDetailDescriptionDTO = modelMapper.map(auctionItemDetailDescriptionRepository.getAuctionItemDetailDescriptionByAuctionItemDetailId(Long.parseLong(obj[0].toString())),AuctionItemDetailDescriptionDTO.class);
+                auctionItemDetailDescriptionDTO.setBidder(userLogin.getLoginId());
                 liveBidDetailDTO = new LiveBidDetailDTO();
                 liveBidDetailDTO.setBidderId(Long.parseLong(obj[1].toString()));
                 liveBidDetailDTO.setMaxBid(new BigDecimal(obj[3].toString()));
                 liveBidDetailDTO.setAuctionDetailId(Long.parseLong(obj[7].toString()));
                 liveBidDetailDTO.setCurrentBid(new BigDecimal(obj[8].toString()));
                 liveBidDetailDTO.setAuctionItemDetail(auctionItemDetailDTO);
+                liveBidDetailDTO.setAuctionItemDetailDescription(auctionItemDetailDescriptionDTO);
                 int itemCstatus = Integer.parseInt(obj[9].toString());
                 liveBidDetailDTO.setItemColor(itemCstatus == 0 ? "alert-dark" : itemCstatus == 1 ? "alert-success" : itemCstatus == 2 || itemCstatus == 4 ?  "alert-danger" : "alert-warning");
                 liveBidDetailDTO.setIncrement(Integer.parseInt(obj[6].toString()));
@@ -544,5 +629,22 @@ public class AuctionController {
     public ResponseEntity<ResponseDTO> copyAuction(@RequestParam("auctionDetailId") Long auctionDetailId){
         boolean vbool = auctionService.copyAuction(auctionDetailId);
         return ResponseEntity.ok(new ResponseDTO("Auction copied successfully",200));
+    }
+
+    @PostMapping("/getitemdescriptions")
+    public List<AuctionItemDetailDescriptionDTO> getItemDetailDescriptionsByAuctionItemDetailId(@RequestParam("auctionItemDetailIds") String auctionItemDetailIdsStr){
+        List<Long> auctionItemDetailIds =
+        Arrays.asList(auctionItemDetailIdsStr.split(",")).stream()
+                .map(
+                        arrStr -> Long.parseLong(arrStr)
+                ).collect(Collectors.toList());
+        List<AuctionItemDetailDescriptionDTO> list = auctionItemDetailDescriptionRepository.getAuctionItemDetailDescriptions(auctionItemDetailIds)
+                .stream().map(
+                        item -> {
+                            AuctionItemDetailDescriptionDTO auctionItemDetailDescriptionDTO = modelMapper.map(item,AuctionItemDetailDescriptionDTO.class);
+                            return auctionItemDetailDescriptionDTO;
+                        }
+                ).collect(Collectors.toList());
+        return list;
     }
 }

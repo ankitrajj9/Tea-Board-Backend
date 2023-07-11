@@ -1,6 +1,7 @@
 package com.ankit.teaboard.dto.apidto;
 
 import com.ankit.teaboard.dto.entitydto.AuctionItemDetailDTO;
+import com.ankit.teaboard.dto.entitydto.AuctionItemDetailDescriptionDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 public class LiveBidDetailDTO {
     private Long bidderId;
     private AuctionItemDetailDTO auctionItemDetail;
+    private AuctionItemDetailDescriptionDTO auctionItemDetailDescription;
     private Long auctionDetailId;
     private BigDecimal currentBid;
     private BigDecimal maxBid;

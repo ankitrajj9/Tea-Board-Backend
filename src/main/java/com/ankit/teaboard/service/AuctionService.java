@@ -26,6 +26,9 @@ public class AuctionService {
     private AuctionItemDetailRepository auctionItemDetailRepository;
 
     @Autowired
+    private AuctionItemDetailDescriptionRepository auctionItemDetailDescriptionRepository;
+
+    @Autowired
     private AuctionBidHistoryRepository auctionBidHistoryRepository;
 
     @Autowired
@@ -561,8 +564,10 @@ public class AuctionService {
         List<AuctionItemDetail> existingAuctionItems = auctionItemDetailRepository.getAuctionItemsByAuctionDetailId(auctionDetailId);
         List<AuctionItemDetail> newAuctionItems = new ArrayList<>();
         AuctionItemDetail auctionItemDetail = null;
+        AuctionItemDetailDescription auctionItemDetailDescription = null;
         for(AuctionItemDetail existingAuctionItemDetail:existingAuctionItems){
             auctionItemDetail = new AuctionItemDetail();
+            auctionItemDetailDescription = new AuctionItemDetailDescription();
             auctionItemDetail.setAuctionDetail(newAuctionDetail);
             auctionItemDetail.setCreatedBy(existingAuctionDetail.getCreatedBy());
             auctionItemDetail.setCreatedOn(new Date());
@@ -578,6 +583,35 @@ public class AuctionService {
             auctionItemDetail.setReservePrice(existingAuctionItemDetail.getReservePrice());
             auctionItemDetail.setIncrement(existingAuctionItemDetail.getIncrement());
             auctionItemDetailRepository.save(auctionItemDetail);
+            AuctionItemDetailDescription existingAuctionItemDetailDescription = auctionItemDetailDescriptionRepository.getAuctionItemDetailDescriptionByAuctionItemDetailId(existingAuctionItemDetail.getAuctionItemDetailId());
+            auctionItemDetailDescription.setAuctionItemDetail(auctionItemDetail);
+            auctionItemDetailDescription.setOrigin(existingAuctionItemDetailDescription.getOrigin());
+            auctionItemDetailDescription.setType(existingAuctionItemDetailDescription.getType());
+            auctionItemDetailDescription.setSubType(existingAuctionItemDetailDescription.getSubType());
+            auctionItemDetailDescription.setMark(existingAuctionItemDetailDescription.getMark());
+            auctionItemDetailDescription.setStatus(existingAuctionItemDetailDescription.getStatus());
+            auctionItemDetailDescription.setNetWeight(existingAuctionItemDetailDescription.getNetWeight());
+            auctionItemDetailDescription.setGrossWeight(existingAuctionItemDetailDescription.getGrossWeight());
+            auctionItemDetailDescription.setTotalNetWeight(existingAuctionItemDetailDescription.getTotalNetWeight());
+            auctionItemDetailDescription.setManufacturePercentage(existingAuctionItemDetailDescription.getManufacturePercentage());
+            auctionItemDetailDescription.setPackageComments(existingAuctionItemDetailDescription.getPackageComments());
+            auctionItemDetailDescription.setLotType(existingAuctionItemDetailDescription.getLotType());
+            auctionItemDetailDescription.setGpNo(existingAuctionItemDetailDescription.getGpNo());
+            auctionItemDetailDescription.setGpDate(existingAuctionItemDetailDescription.getGpDate());
+            auctionItemDetailDescription.setInvoiceNo(existingAuctionItemDetailDescription.getInvoiceNo());
+            auctionItemDetailDescription.setLspSp(existingAuctionItemDetailDescription.getLspSp());
+            auctionItemDetailDescription.setPl(existingAuctionItemDetailDescription.getPl());
+            auctionItemDetailDescription.setPackageNo(existingAuctionItemDetailDescription.getPackageNo());
+            auctionItemDetailDescription.setWarehouseName(existingAuctionItemDetailDescription.getWarehouseName());
+            auctionItemDetailDescription.setGarden(existingAuctionItemDetailDescription.getGarden());
+            auctionItemDetailDescription.setSpecial(existingAuctionItemDetailDescription.getSpecial());
+            auctionItemDetailDescription.setQuality(existingAuctionItemDetailDescription.getQuality());
+            auctionItemDetailDescription.setColor(existingAuctionItemDetailDescription.getColor());
+            auctionItemDetailDescription.setAge(existingAuctionItemDetailDescription.getAge());
+            auctionItemDetailDescription.setBrewer(existingAuctionItemDetailDescription.getBrewer());
+            auctionItemDetailDescription.setNoOfBidders(existingAuctionItemDetailDescription.getNoOfBidders());
+            auctionItemDetailDescription.setActiveSince(new Date());
+            auctionItemDetailDescriptionRepository.save(auctionItemDetailDescription);
             List<AuctionBidDetail> existingAuctionBidDetails = auctionBidDetailRepository.getAuctionBidDetailByAuctionItemDetailId(existingAuctionItemDetail.getAuctionItemDetailId());
             List<AuctionBidDetail> toBeAdded = new ArrayList<>();
                 for(AuctionBidDetail auctionBidDetail:existingAuctionBidDetails){
