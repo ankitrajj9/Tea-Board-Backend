@@ -72,4 +72,7 @@ public interface AuctionBidDetailRepository extends JpaRepository<AuctionBidDeta
 
     @Query("SELECT auctionBidDetail FROM AuctionBidDetail auctionBidDetail WHERE auctionBidDetail.auctionItemDetail.auctionItemDetailId =:auctionItemDetailId AND auctionBidDetail.isActive=1 ")
     public List<AuctionBidDetail> getAuctionBidDetailByAuctionItemDetailId(@Param("auctionItemDetailId") Long auctionItemDetailId);
+
+    @Query(value = "select bidDtl.auctionBidDetailId from auctionBidDetail bidDtl inner join auctionItemDetail item on item.auctionItemDetailId=bidDtl.auctionItemDetailId inner join auctionDetail auction on auction.auctionDetailId=item.auctionDetailId where item.auctionItemDetailId=:auctionItemDetailId and auction.auctionDetailId=:auctionDetailId and bidDtl.cstatus=0 and bidDtl.isActive=1",nativeQuery = true)
+    public List<Object[]> getActiveBidders(@Param("auctionItemDetailId") Long auctionItemDetailId,@Param("auctionDetailId") Long auctionDetailId);
 }

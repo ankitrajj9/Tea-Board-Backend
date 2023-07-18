@@ -63,6 +63,8 @@ public class AuctionService {
         List<AuctionBidDetail> auctionBidDetails = null;
         List<AuctionItemL1Detail> l1Details = null;
         List<Long> unsoldItems = null;
+        Map<Long,List<AuctionBidDetail>> rejectedMapEvenIfRpHasReached = null;
+        List<AuctionBidDetail> rejectedLstEvenIfRpHasReached = null;
         final Set<Long> itemWiseSchedulerCount = new HashSet<>();
         final Set<Long> soldItems = new HashSet<>();
         final Set<Long> timeWisesoldItems = new HashSet<>();
@@ -71,6 +73,8 @@ public class AuctionService {
             auctionBidDetails = new ArrayList<>();
             l1Details = new ArrayList<>();
             unsoldItems = new ArrayList<>();
+            rejectedMapEvenIfRpHasReached = new HashMap<>();
+            rejectedLstEvenIfRpHasReached = new ArrayList<>();
             Map<Long,Integer> itemWiseEligibleBidders = this.getItemWiseEligibleBiddersCount(auctionDetailId);
             for (Object[] obj : liveBidData) {
                 Long itemDetailId = Long.parseLong(obj[0].toString());
@@ -209,7 +213,7 @@ public class AuctionService {
                             auctionBids.add(auctionBidHistory);*/
                                                 AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
                                                 auctionItemL1Detail.setCstatus(1);
-                                                auctionItemL1Detail.setAmount(bestBid);
+                                                auctionItemL1Detail.setAmount(bestBid.compareTo(auctionBidDetail.getMaxBid()) == 1 ? auctionBidDetail.getMaxBid() : bestBid);
                                                 auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
                                                 auctionItemL1Detail.setUserLogin(new UserLogin(finalVendorBasedUponTime));
                                                 auctionItemL1Detail.setAuctionDetail(auctionDetail);
@@ -268,6 +272,17 @@ public class AuctionService {
                                             auctionBidDetail.setCstatus(2);
                                             //ADDED AT LAST TO SEE AT WHICH RATE BIDDER GOT OUT BY SYSTEM
                                             auctionBidDetail.setCpAtExit(currentPrice);
+                                            if(isReservePriceReached(currentPrice,reservePrice)){
+                                                if(rejectedMapEvenIfRpHasReached.get(itemDetailId) == null) {
+                                                    rejectedLstEvenIfRpHasReached.add(auctionBidDetail);
+                                                    rejectedMapEvenIfRpHasReached.put(itemDetailId, rejectedLstEvenIfRpHasReached);
+                                                }
+                                                else{
+                                                    List<AuctionBidDetail> tempLs = rejectedMapEvenIfRpHasReached.get(itemDetailId);
+                                                    tempLs.add(auctionBidDetail);
+                                                    rejectedMapEvenIfRpHasReached.put(itemDetailId, tempLs);
+                                                }
+                                            }
                                         }
                                         auctionBidDetails.add(auctionBidDetail);
                                     }
@@ -279,6 +294,54 @@ public class AuctionService {
             }
             if(auctionBidDetails != null && !auctionBidDetails.isEmpty()) {
                 auctionBidDetailRepository.saveAll(auctionBidDetails);
+                if(rejectedMapEvenIfRpHasReached != null && !rejectedMapEvenIfRpHasReached.isEmpty()) {
+                    List<AuctionBidDetail> reUpdateLst = new ArrayList<>();
+                    Set<Long> itemDetailIds = rejectedMapEvenIfRpHasReached.keySet();
+                    for (Long itemDetailId:itemDetailIds){
+                        if (auctionBidDetailRepository.getActiveBidders(itemDetailId,auctionDetailId).isEmpty()) {
+                            //Allot Item to Max Bid Bidder or if it is same then time allocation
+                            AuctionItemDetail auctionItemDetail = auctionItemDetailRepository.findById(itemDetailId).get();
+                            List<AuctionBidDetail> rejectedLst = rejectedMapEvenIfRpHasReached.get(itemDetailId);
+                            BigDecimal maxBid = new BigDecimal(0);
+                            sortBidsBasedUponMaxBid(rejectedLst);
+                            if(rejectedLst.get(0).getMaxBid().compareTo(rejectedLst.get(1).getMaxBid()) == 1){
+                                AuctionBidDetail updateBid = rejectedLst.get(0);
+                                updateBid.setUpdatedOn(new Date());
+                                updateBid.setCpAtExit(null);
+                                updateBid.setCstatus(1);
+                                auctionBidDetailRepository.save(updateBid);
+                                AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                auctionItemL1Detail.setCstatus(1);
+                                soldItems.add(itemDetailId);
+                                BigDecimal bestBid = rejectedLst.get(1).getMaxBid().add(new BigDecimal(auctionItemDetail.getIncrement()));
+                                if(bestBid.compareTo(updateBid.getMaxBid()) == 1){
+                                    bestBid = updateBid.getMaxBid();
+                                }
+                                auctionItemL1Detail.setAmount(bestBid);
+                                auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                auctionItemL1Detail.setUserLogin(updateBid.getUserLogin());
+                                auctionItemL1Detail.setAuctionDetail(new AuctionDetail(auctionDetailId));
+                                auctionItemL1DetailRepository.save(auctionItemL1Detail);
+                            }
+                            else{
+                                sortBidsBasedTime(rejectedLst);
+                                AuctionBidDetail updateBid = rejectedLst.get(0);
+                                updateBid.setCstatus(1);
+                                updateBid.setUpdatedOn(new Date());
+                                updateBid.setCpAtExit(null);
+                                soldItems.add(itemDetailId);
+                                auctionBidDetailRepository.save(updateBid);
+                                AuctionItemL1Detail auctionItemL1Detail = new AuctionItemL1Detail();
+                                auctionItemL1Detail.setCstatus(1);
+                                auctionItemL1Detail.setAmount(rejectedLst.get(0).getMaxBid());
+                                auctionItemL1Detail.setAuctionItemDetail(new AuctionItemDetail(itemDetailId));
+                                auctionItemL1Detail.setUserLogin(updateBid.getUserLogin());
+                                auctionItemL1Detail.setAuctionDetail(new AuctionDetail(auctionDetailId));
+                                auctionItemL1DetailRepository.save(auctionItemL1Detail);
+                            }
+                        }
+                    }
+                }
             }
             //auctionBidHistoryRepository.saveAll(auctionBids);
             if(l1Details != null && !l1Details.isEmpty()) {
@@ -637,5 +700,34 @@ public class AuctionService {
 
     public boolean isPriceExceedingMaxBid(BigDecimal bestBid,BigDecimal maxBid){
         return bestBid.compareTo(maxBid) == 1;
+    }
+
+    public boolean isReservePriceReached(BigDecimal currentPrice,BigDecimal reservePrice){
+        return currentPrice.compareTo(reservePrice) != -1;
+    }
+
+    private void sortBidsBasedUponMaxBid(List<AuctionBidDetail> bidDetails){
+        bidDetails.sort((o1,o2) -> o2.getMaxBid().compareTo(o1.getMaxBid()));
+    }
+
+    private void sortBidsBasedTime(List<AuctionBidDetail> bidDetails){
+        bidDetails.sort((o1,o2) -> o1.getCreatedOn().compareTo(o2.getCreatedOn()));
+    }
+
+    public static void main(String args[]){
+        List<BigDecimal> ls = new ArrayList<>();
+        ls.add(new BigDecimal(123));
+        ls.add(new BigDecimal(85));
+        ls.add(new BigDecimal(720));
+        ls.add(new BigDecimal(430));
+        System.out.println("Before Sort : ");
+        for(BigDecimal num:ls){
+            System.out.println(num);
+        }
+        ls.sort((o1,o2) -> o2.compareTo(o1));
+        System.out.println("After Sort : ");
+        for(BigDecimal num:ls){
+            System.out.println(num);
+        }
     }
 }
